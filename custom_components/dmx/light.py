@@ -101,6 +101,7 @@ CONF_LIGHT_TYPE_RGBWD = "rgbwd"
 CONF_LIGHT_TYPE_SWITCH = "switch"
 CONF_LIGHT_TYPE_FIXED = "fixed"
 CONF_LIGHT_TYPE_CUSTOM_WHITE = "custom_white"
+CONF_LIGHT_TYPE_GEMINI = "gemini"
 CONF_LIGHT_TYPES = [
     CONF_LIGHT_TYPE_DIMMER,
     CONF_LIGHT_TYPE_RGB,
@@ -115,6 +116,7 @@ CONF_LIGHT_TYPES = [
     CONF_LIGHT_TYPE_DRGBW,
     CONF_LIGHT_TYPE_RGBWD,
     CONF_LIGHT_TYPE_CUSTOM_WHITE,
+    CONF_LIGHT_TYPE_GEMINI,
 ]
 
 # Number of channels used by each light type
@@ -132,6 +134,7 @@ CHANNEL_COUNT_MAP[CONF_LIGHT_TYPE_RGBWD] = 5
 CHANNEL_COUNT_MAP[CONF_LIGHT_TYPE_SWITCH] = 1
 CHANNEL_COUNT_MAP[CONF_LIGHT_TYPE_FIXED] = 1
 CHANNEL_COUNT_MAP[CONF_LIGHT_TYPE_CUSTOM_WHITE] = 2
+CHANNEL_COUNT_MAP[CONF_LIGHT_TYPE_GEMINI] = 8
 
 # Features supported by light types
 FEATURE_MAP[CONF_LIGHT_TYPE_DIMMER] = SUPPORT_BRIGHTNESS | SUPPORT_TRANSITION
@@ -167,6 +170,9 @@ FEATURE_MAP[CONF_LIGHT_TYPE_FIXED] = 0
 FEATURE_MAP[CONF_LIGHT_TYPE_CUSTOM_WHITE] = (
     SUPPORT_BRIGHTNESS | SUPPORT_TRANSITION | SUPPORT_COLOR_TEMP
 )
+FEATURE_MAP[CONF_LIGHT_TYPE_GEMINI] = (
+    SUPPORT_BRIGHTNESS | SUPPORT_TRANSITION | SUPPORT_COLOR | SUPPORT_WHITE_VALUE | SUPPORT_COLOR_TEMP
+)
 
 # Default color for each light type if not specified in configuration
 COLOR_MAP[CONF_LIGHT_TYPE_DIMMER] = None
@@ -182,6 +188,7 @@ COLOR_MAP[CONF_LIGHT_TYPE_RGBWD] = [255, 255, 255]
 COLOR_MAP[CONF_LIGHT_TYPE_SWITCH] = None
 COLOR_MAP[CONF_LIGHT_TYPE_FIXED] = None
 COLOR_MAP[CONF_LIGHT_TYPE_CUSTOM_WHITE] = None
+COLOR_MAP[CONF_LIGHT_TYPE_GEMINI] = [255, 255, 255]
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -364,6 +371,7 @@ class DMXLight(LightEntity, RestoreEntity):
             (self._type == CONF_LIGHT_TYPE_RGBW)
             or (self._type == CONF_LIGHT_TYPE_RGBWD)
             or (self._type == CONF_LIGHT_TYPE_DRGBW)
+            or (self._type == CONF_LIGHT_TYPE_GEMINI)
         ):
             return self._white_value
         else:
@@ -469,6 +477,13 @@ class DMXLight(LightEntity, RestoreEntity):
                 values.append(int(round(switcher.get(channel, 0))))
 
             return values
+        elif self._type == CONF_LIGHT_TYPE_GEMINI:
+            ww_fraction = (self._color_temp - self.min_mireds) / (
+                self.max_mireds - self.min_mireds
+            )
+            cct = 255 - (ww_fraction * 255)
+            gemini = [round(self._brightness), cct, self._white_value, self._rgb[0], 128, 192, self._rgb[1], self._rgb[2]]
+            return gemini
         else:
             return self._brightness
 
